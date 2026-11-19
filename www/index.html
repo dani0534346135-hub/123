@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>אספלט חי APK — מרוץ, מוזיקה ודמויות | הרב דניאל כרייף שליט"א</title>
+<style>
+  :root {
+    --bg-dark: #070a0f;
+    --panel-bg: rgba(13, 18, 28, 0.9);
+    --panel-border: rgba(255, 255, 255, 0.13);
+    --accent: #f59e0b;
+    --accent-2: #38bdf8;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+  }
+  * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
+    background: var(--bg-dark); color: var(--text-main);
+    font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+  }
+  #game-canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+
+  #hud-top {
+    position: fixed; top: 12px; left: 12px; right: 12px; z-index: 20;
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;
+    pointer-events: none;
+  }
+  .hud-group { display: flex; gap: 8px; flex-wrap: wrap; pointer-events: auto; }
+  .hud-card {
+    background: var(--panel-bg); backdrop-filter: blur(12px);
+    border: 1px solid var(--panel-border); border-radius: 13px;
+    padding: 8px 12px; min-width: 92px;
+  }
+  .hud-label { font-size: 10px; color: var(--text-muted); }
+  .hud-val { font-size: 18px; font-weight: 800; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .hud-val.accent { color: var(--accent); }
+  .hud-val.cyan { color: var(--accent-2); }
+
+  .icon-btn {
+    background: var(--panel-bg); border: 1px solid var(--panel-border); color: var(--text-main);
+    border-radius: 12px; padding: 9px 12px; font-size: 13px; font-weight: 700;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 5px;
+  }
+  .icon-btn:active { transform: scale(0.96); }
+
+  /* Music Mini Bar */
+  #music-bar {
+    position: fixed; top: 76px; left: 12px; z-index: 20;
+    background: var(--panel-bg); border: 1px solid var(--panel-border);
+    border-radius: 14px; padding: 7px 11px; display: flex; align-items: center; gap: 8px;
+    font-size: 12px;
+  }
+  .mini-btn {
+    background: rgba(255,255,255,0.08); border: none; color: #fff;
+    border-radius: 8px; padding: 4px 8px; font-size: 12px; cursor: pointer; font-weight: 700;
+  }
+  .mini-btn.active { background: var(--accent); color: #090d16; }
+
+  #speed-cluster {
+    position: fixed; bottom: 16px; left: 16px; z-index: 20; pointer-events: none;
+    background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 20px;
+    padding: 12px 16px; min-width: 168px;
+  }
+  #speed-num { font-size: 36px; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
+  #gear-badge {
+    display: inline-block; background: rgba(245, 158, 11, 0.2); color: var(--accent);
+    border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 7px; padding: 2px 7px; font-size: 11px; font-weight: 800;
+  }
+  .bar-track { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 99px; overflow: hidden; margin-top: 7px; }
+  #rpm-fill { height: 100%; width: 15%; background: linear-gradient(90deg, #10b981, #f59e0b 65%, #ef4444); }
+  #nitro-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #0284c7, #38bdf8); }
+
+  #driver-pill {
+    position: fixed; bottom: 16px; right: 16px; z-index: 20; pointer-events: none;
+    display: flex; align-items: center; gap: 10px;
+    background: var(--panel-bg); border: 1px solid var(--panel-border); border-radius: 16px;
+    padding: 7px 12px 7px 8px;
+  }
+  #driver-pill img { width: 42px; height: 42px; border-radius: 11px; object-fit: cover; border: 1.5px solid var(--accent); }
+
+  #touch-controls {
+    position: fixed; bottom: 78px; left: 12px; right: 12px; z-index: 22;
+    display: flex; justify-content: space-between; align-items: flex-end; pointer-events: none;
+  }
+  .touch-pad { display: flex; gap: 10px; pointer-events: auto; }
+  .touch-btn {
+    width: 60px; height: 60px; border-radius: 18px;
+    background: rgba(15, 23, 42, 0.82); border: 1px solid rgba(255,255,255,0.22);
+    color: #fff; font-size: 18px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .touch-btn:active { background: rgba(245, 158, 11, 0.5); transform: scale(0.95); }
+
+  #start-screen {
+    position: fixed; inset: 0; z-index: 30;
+    background: radial-gradient(circle at 50% 20%, rgba(245,158,11,0.16), rgba(6,9,15,0.95) 75%);
+    display: flex; align-items: center; justify-content: center; padding: 14px;
+  }
+  .start-box {
+    width: 100%; max-width: 820px; max-height: 94vh; overflow-y: auto;
+    background: rgba(11, 16, 26, 0.96); border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 24px; padding: 20px;
+  }
+  .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)); gap: 12px; }
+  .choice-card {
+    background: rgba(255,255,255,0.03); border: 1.5px solid rgba(255,255,255,0.1);
+    border-radius: 16px; padding: 12px; cursor: pointer; text-align: center;
+  }
+  .choice-card.selected { border-color: var(--accent); background: rgba(245, 158, 11, 0.14); }
+  .choice-card img { width: 82px; height: 82px; margin: 0 auto 8px; display: block; }
+  .choice-card.driver-card img { object-fit: cover; border-radius: 14px; }
+  .section-label { font-size: 13px; font-weight: 800; color: var(--accent); margin: 14px 0 8px; }
+  .primary-btn {
+    background: linear-gradient(135deg, #f59e0b, #d97706); color: #090d16;
+    border: none; border-radius: 14px; padding: 12px 24px; font-size: 15px; font-weight: 900; cursor: pointer;
+  }
+
+  .modal-backdrop {
+    position: fixed; inset: 0; z-index: 40; background: rgba(4, 7, 13, 0.82);
+    display: none; align-items: center; justify-content: center; padding: 14px;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal-card {
+    width: 100%; max-width: 720px; max-height: 88vh; overflow-y: auto;
+    background: #0d131f; border: 1px solid rgba(255,255,255,0.14); border-radius: 22px; padding: 20px;
+  }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; margin-bottom: 14px; }
+  .close-btn { background: rgba(255,255,255,0.08); border: none; color: #fff; width: 34px; height: 34px; border-radius: 9px; cursor: pointer; }
+  .setting-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid rgba(255,255,255,0.07); }
+  select, input[type="range"] { background: #162033; color: #fff; border: 1px solid rgba(255,255,255,0.18); border-radius: 9px; padding: 6px 10px; }
+  .credits-box { background: rgba(245,158,11,0.09); border: 1px solid rgba(245,158,11,0.3); border-radius: 16px; padding: 14px; line-height: 1.7; }
+</style>
+</head>
+<body>
+
+<canvas id="game-canvas"></canvas>
+
+<div id="hud-top">
+  <div class="hud-group">
+    <div class="hud-card"><div class="hud-label">ניקוד</div><div class="hud-val accent" id="hud-score">0</div></div>
+    <div class="hud-card"><div class="hud-label">מרחק</div><div class="hud-val cyan" id="hud-dist">0.00 ק״מ</div></div>
+    <div class="hud-card"><div class="hud-label">שיא</div><div class="hud-val" id="hud-best">0</div></div>
+  </div>
+  <div class="hud-group">
+    <button class="icon-btn" id="btn-open-settings">⚙️ הגדרות</button>
+    <button class="icon-btn" id="btn-open-credits">🏆 קרדיטים</button>
+    <button class="icon-btn" id="btn-pause">⏸️</button>
+  </div>
+</div>
+
+<div id="music-bar">
+  <span>🎵 מוזיקה:</span>
+  <button class="mini-btn active" data-track="synth">סינת'-פופ</button>
+  <button class="mini-btn" data-track="mediterranean">ים-תיכוני קצבי</button>
+  <button class="mini-btn" data-track="off">כבוי</button>
+</div>
+
+<div id="speed-cluster">
+  <div><span id="speed-num">0</span> <span style="font-size:11px;color:var(--accent);font-weight:700;">קמ״ש</span> <span id="gear-badge">N</span></div>
+  <div class="bar-track"><div id="rpm-fill"></div></div>
+  <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:10px;color:var(--text-muted);">
+    <span>ניטרו</span><span id="nitro-pct">100%</span>
+  </div>
+  <div class="bar-track"><div id="nitro-fill"></div></div>
+</div>
+
+<div id="driver-pill">
+  <img id="pill-driver-img" src="assets/driver_omar.png" alt="דמות" />
+  <div>
+    <div id="pill-driver-name" style="font-size:13px;font-weight:800;">עומר לוי</div>
+    <div id="pill-car-name" style="font-size:11px;color:var(--text-muted);">GT קלאסי • יום בהיר</div>
+  </div>
+</div>
+
+<div id="touch-controls">
+  <div class="touch-pad">
+    <button class="touch-btn" id="t-left">◀</button>
+    <button class="touch-btn" id="t-right">▶</button>
+  </div>
+  <div class="touch-pad">
+    <button class="touch-btn" id="t-brake">בלום</button>
+    <button class="touch-btn" id="t-nitro">🚀</button>
+    <button class="touch-btn" id="t-gas">גז</button>
+  </div>
+</div>
+
+<div id="start-screen">
+  <div class="start-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+      <div>
+        <h1 style="margin:0;font-size:24px;font-weight:900;">🏁 אספלט חי — APK מרוצים ומוזיקה</h1>
+        <div style="font-size:12px;color:var(--text-muted);">בחירת דמויות, רכבים, פסקול מוזיקלי מובנה, הגדרות ועיצוב מלא</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="icon-btn" id="start-btn-credits">קרדיטים</button>
+        <button class="icon-btn" id="start-btn-settings">הגדרות</button>
+      </div>
+    </div>
+
+    <div class="section-label">1. בחר דמות נהג</div>
+    <div class="grid-3" id="driver-grid">
+      <div class="choice-card driver-card selected" data-driver="omar" data-driver-name="עומר לוי" data-driver-img="assets/driver_omar.png">
+        <img src="assets/driver_omar.png" alt="עומר לוי" />
+        <div style="font-weight:800;">עומר לוי</div>
+        <div style="font-size:11px;color:var(--text-muted);">היגוי מדויק • +8% ניקוד</div>
+      </div>
+      <div class="choice-card driver-card" data-driver="noam" data-driver-name="נועם כהן" data-driver-img="assets/driver_noam.png">
+        <img src="assets/driver_noam.png" alt="נועם כהן" />
+        <div style="font-weight:800;">נועם כהן</div>
+        <div style="font-size:11px;color:var(--text-muted);">תאוצה חדה • ניטרו מהיר</div>
+      </div>
+      <div class="choice-card driver-card" data-driver="eyal" data-driver-name="אייל מזרחי" data-driver-img="assets/driver_eyal.png">
+        <img src="assets/driver_eyal.png" alt="אייל מזרחי" />
+        <div style="font-weight:800;">אייל מזרחי</div>
+        <div style="font-size:11px;color:var(--text-muted);">מהירות שיא • יציבות גבוהה</div>
+      </div>
+    </div>
+
+    <div class="section-label">2. בחר מכונית</div>
+    <div class="grid-3" id="car-grid">
+      <div class="choice-card selected" data-car="gt" data-car-name="GT קלאסי" data-car-img="assets/car_gt.svg" data-top="235" data-accel="135">
+        <img src="assets/car_gt.svg" alt="GT קלאסי" />
+        <div style="font-weight:800;">GT קלאסי</div>
+        <div style="font-size:11px;color:var(--text-muted);">235 קמ״ש • מאוזן</div>
+      </div>
+      <div class="choice-card" data-car="turbo" data-car-name="טורבו אדום" data-car-img="assets/car_turbo.svg" data-top="252" data-accel="162">
+        <img src="assets/car_turbo.svg" alt="טורבו אדום" />
+        <div style="font-weight:800;">טורבו אדום</div>
+        <div style="font-size:11px;color:var(--text-muted);">252 קמ״ש • תאוצה חזקה</div>
+      </div>
+      <div class="choice-card" data-car="drift" data-car-name="אקו דריפט" data-car-img="assets/car_drift.svg" data-top="225" data-accel="145">
+        <img src="assets/car_drift.svg" alt="אקו דריפט" />
+        <div style="font-weight:800;">אקו דריפט</div>
+        <div style="font-size:11px;color:var(--text-muted);">225 קמ״ש • היגוי זריז</div>
+      </div>
+    </div>
+
+    <div style="margin-top:18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+      <div style="font-size:12px;color:var(--text-muted);">עיצוב כביש: <strong id="start-env-label" style="color:#fff;">יום בהיר</strong></div>
+      <button class="primary-btn" id="btn-start-race">התחל מרוץ 🏎️</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-settings">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h2 style="margin:0;font-size:19px;">⚙️ הגדרות ועיצוב</h2>
+      <button class="close-btn" data-close="modal-settings">✕</button>
+    </div>
+    <div class="setting-row">
+      <div><div style="font-weight:700;">עיצוב סביבה ותאורה</div><div style="font-size:12px;color:var(--text-muted);">יום בהיר / שקיעה זהובה / לילה</div></div>
+      <select id="opt-env">
+        <option value="day">יום בהיר</option>
+        <option value="sunset">שקיעה זהובה</option>
+        <option value="night">לילה עם פנסים</option>
+      </select>
+    </div>
+    <div class="setting-row">
+      <div><div style="font-weight:700;">רמת קושי</div><div style="font-size:12px;color:var(--text-muted);">צפיפות ומהירות תנועה</div></div>
+      <select id="opt-diff">
+        <option value="chill">רגוע</option>
+        <option value="normal" selected>רגיל</option>
+        <option value="pro">מתקדם</option>
+      </select>
+    </div>
+    <div class="setting-row">
+      <div><div style="font-weight:700;">רגישות היגוי</div></div>
+      <input type="range" id="opt-steer" min="0.75" max="1.45" step="0.05" value="1.05" />
+    </div>
+    <div class="setting-row">
+      <div><div style="font-weight:700;">עוצמת מוזיקה ומנוע</div></div>
+      <input type="range" id="opt-vol" min="0" max="1" step="0.05" value="0.4" />
+    </div>
+    <div style="margin-top:16px;text-align:left;"><button class="primary-btn" data-close="modal-settings">שמור</button></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-credits">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h2 style="margin:0;font-size:19px;">🏆 קרדיטים</h2>
+      <button class="close-btn" data-close="modal-credits">✕</button>
+    </div>
+    <div class="credits-box">
+      <div style="font-size:17px;font-weight:900;color:var(--accent);">יוצר, מעצב ומפתח המשחק והאפליקציה: הרב דניאל כרייף שליט"א</div>
+      <p style="margin:8px 0 0;">כל הזכויות שמורות © הרב דניאל כרייף שליט"א. אפליקציית Android מרוצים עם סינתיסייזר מוזיקה ומנוע מובנה, דמויות נהגים, רכבים והגדרות עיצוב.</p>
+    </div>
+    <div style="margin-top:16px;text-align:left;"><button class="primary-btn" data-close="modal-credits">סגור</button></div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal-gameover">
+  <div class="modal-card" style="text-align:center;max-width:440px;">
+    <h2 style="margin-top:0;">💥 סיום מקצה!</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0;">
+      <div class="hud-card"><div class="hud-label">ניקוד</div><div class="hud-val accent" id="go-score">0</div></div>
+      <div class="hud-card"><div class="hud-label">מרחק</div><div class="hud-val cyan" id="go-dist">0.00 ק״מ</div></div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+      <button class="primary-btn" id="btn-retry">מרוץ חוזר 🔄</button>
+      <button class="icon-btn" id="btn-to-garage">דמות / רכב</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById("game-canvas");
+  const ctx = canvas.getContext("2d");
+
+  const state = {
+    mode: "menu",
+    score: 0,
+    bestScore: Number(localStorage.getItem("asphalt_apk_best") || 0),
+    distanceMeters: 0,
+    speedKmh: 0,
+    rpm: 0.15,
+    gear: "N",
+    nitro: 100,
+    playerX: 0.5,
+    playerVx: 0,
+    roadScroll: 0,
+    shake: 0,
+    traffic: [],
+    particles: [],
+    spawnTimer: 0.4,
+    track: "synth",
+    driver: { id: "omar", name: "עומר לוי", img: "assets/driver_omar.png" },
+    car: { id: "gt", name: "GT קלאסי", img: "assets/car_gt.svg", topSpeed: 235, accel: 135 },
+    settings: { env: "day", diff: "normal", steer: 1.05, vol: 0.4 }
+  };
+
+  const keys = { left: false, right: false, gas: false, brake: false, nitro: false };
+  const playerCarImg = new Image();
+  playerCarImg.src = state.car.img;
+  const trafficImgs = ["assets/car_turbo.svg", "assets/car_drift.svg", "assets/car_gt.svg"].map(src => {
+    const im = new Image(); im.src = src; return im;
+  });
+
+  // WebAudio Engine + Background Music Sequencer
+  let audioCtx = null, engineOsc = null, engineGain = null, musicGain = null, musicTimer = null, stepIdx = 0;
+
+  const melodies = {
+    synth: [220, 261.63, 329.63, 293.66, 349.23, 329.63, 261.63, 196.0],
+    mediterranean: [293.66, 311.13, 369.99, 440.0, 369.99, 311.13, 293.66, 220.0]
+  };
+
+  function initAudio() {
+    if (audioCtx) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    audioCtx = new AC();
+    engineGain = audioCtx.createGain();
+    engineGain.gain.value = 0.0001;
+    engineGain.connect(audioCtx.destination);
+
+    engineOsc = audioCtx.createOscillator();
+    engineOsc.type = "sawtooth";
+    engineOsc.frequency.value = 55;
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.value = 430;
+    engineOsc.connect(filter);
+    filter.connect(engineGain);
+    engineOsc.start();
+
+    musicGain = audioCtx.createGain();
+    musicGain.gain.value = state.settings.vol * 0.12;
+    musicGain.connect(audioCtx.destination);
+
+    musicTimer = setInterval(() => {
+      if (!audioCtx || audioCtx.state !== "running" || state.track === "off" || state.settings.vol <= 0) return;
+      const notes = melodies[state.track] || melodies.synth;
+      const freq = notes[stepIdx % notes.length];
+      stepIdx++;
+      const osc = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      osc.type = state.track === "synth" ? "triangle" : "sine";
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      g.gain.setValueAtTime(0.001, audioCtx.currentTime);
+      g.gain.linearRampToValueAtTime(state.settings.vol * 0.14, audioCtx.currentTime + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0008, audioCtx.currentTime + 0.22);
+      osc.connect(g);
+      g.connect(musicGain);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.24);
+    }, 240);
+  }
+
+  function updateAudio() {
+    if (!audioCtx || !engineGain) return;
+    const active = state.mode === "playing";
+    engineGain.gain.setTargetAtTime(active ? state.settings.vol * 0.14 : 0.0001, audioCtx.currentTime, 0.06);
+    engineOsc.frequency.setTargetAtTime(48 + (state.speedKmh / 260) * 140 + state.rpm * 50, audioCtx.currentTime, 0.05);
+  }
+
+  function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+  window.addEventListener("resize", resize);
+  resize();
+
+  function syncHUD() {
+    document.getElementById("hud-score").textContent = Math.floor(state.score).toLocaleString("he-IL");
+    document.getElementById("hud-dist").textContent = (state.distanceMeters / 1000).toFixed(2) + " ק״מ";
+    document.getElementById("hud-best").textContent = Math.floor(state.bestScore).toLocaleString("he-IL");
+    document.getElementById("speed-num").textContent = Math.round(state.speedKmh);
+    document.getElementById("gear-badge").textContent = state.gear;
+    document.getElementById("rpm-fill").style.width = Math.min(100, Math.max(8, state.rpm * 100)) + "%";
+    document.getElementById("nitro-fill").style.width = Math.max(0, state.nitro) + "%";
+    document.getElementById("nitro-pct").textContent = Math.round(state.nitro) + "%";
+    const envNames = { day: "יום בהיר", sunset: "שקיעה זהובה", night: "לילה עם פנסים" };
+    document.getElementById("pill-driver-img").src = state.driver.img;
+    document.getElementById("pill-driver-name").textContent = state.driver.name;
+    document.getElementById("pill-car-name").textContent = `${state.car.name} • ${envNames[state.settings.env]}`;
+    document.getElementById("start-env-label").textContent = envNames[state.settings.env];
+  }
+
+  function startRace() {
+    initAudio();
+    if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+    document.getElementById("start-screen").style.display = "none";
+    document.getElementById("modal-gameover").classList.remove("open");
+    state.score = 0; state.distanceMeters = 0; state.speedKmh = 0; state.rpm = 0.15;
+    state.gear = "1"; state.nitro = 100; state.playerX = 0.5; state.playerVx = 0;
+    state.shake = 0; state.traffic = []; state.particles = []; state.spawnTimer = 0.4;
+    playerCarImg.src = state.car.img;
+    state.mode = "playing";
+    syncHUD();
+  }
+
+  function triggerGameOver() {
+    state.mode = "gameover";
+    state.shake = 16;
+    if (state.score > state.bestScore) {
+      state.bestScore = Math.floor(state.score);
+      localStorage.setItem("asphalt_apk_best", String(state.bestScore));
+    }
+    document.getElementById("go-score").textContent = Math.floor(state.score).toLocaleString("he-IL");
+    document.getElementById("go-dist").textContent = (state.distanceMeters / 1000).toFixed(2) + " ק״מ";
+    document.getElementById("modal-gameover").classList.add("open");
+    syncHUD();
+  }
+
+  document.querySelectorAll("#driver-grid .choice-card").forEach(card => {
+    card.addEventListener("click", () => {
+      document.querySelectorAll("#driver-grid .choice-card").forEach(c => c.classList.remove("selected"));
+      card.classList.add("selected");
+      state.driver = { id: card.dataset.driver, name: card.dataset.driverName, img: card.dataset.driverImg };
+      syncHUD();
+    });
+  });
+
+  document.querySelectorAll("#car-grid .choice-card").forEach(card => {
+    card.addEventListener("click", () => {
+      document.querySelectorAll("#car-grid .choice-card").forEach(c => c.classList.remove("selected"));
+      card.classList.add("selected");
+      state.car = {
+        id: card.dataset.car, name: card.dataset.carName, img: card.dataset.carImg,
+        topSpeed: Number(card.dataset.top), accel: Number(card.dataset.accel)
+      };
+      playerCarImg.src = state.car.img;
+      syncHUD();
+    });
+  });
+
+  document.querySelectorAll("#music-bar .mini-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      initAudio();
+      if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+      document.querySelectorAll("#music-bar .mini-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      state.track = btn.dataset.track;
+    });
+  });
+
+  document.getElementById("btn-start-race").addEventListener("click", startRace);
+  document.getElementById("btn-retry").addEventListener("click", startRace);
+  document.getElementById("btn-to-garage").addEventListener("click", () => {
+    document.getElementById("modal-gameover").classList.remove("open");
+    document.getElementById("start-screen").style.display = "flex";
+    state.mode = "menu";
+  });
+
+  function openModal(id) { if (state.mode === "playing") state.mode = "paused"; document.getElementById(id).classList.add("open"); }
+  document.querySelectorAll("[data-close]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.getElementById(btn.dataset.close).classList.remove("open");
+      if (state.mode === "paused") state.mode = "playing";
+    });
+  });
+
+  document.getElementById("btn-open-settings").addEventListener("click", () => openModal("modal-settings"));
+  document.getElementById("start-btn-settings").addEventListener("click", () => openModal("modal-settings"));
+  document.getElementById("btn-open-credits").addEventListener("click", () => openModal("modal-credits"));
+  document.getElementById("start-btn-credits").addEventListener("click", () => openModal("modal-credits"));
+  document.getElementById("btn-pause").addEventListener("click", () => {
+    if (state.mode === "playing") state.mode = "paused";
+    else if (state.mode === "paused") state.mode = "playing";
+  });
+
+  document.getElementById("opt-env").addEventListener("change", e => { state.settings.env = e.target.value; syncHUD(); });
+  document.getElementById("opt-diff").addEventListener("change", e => { state.settings.diff = e.target.value; });
+  document.getElementById("opt-steer").addEventListener("input", e => { state.settings.steer = Number(e.target.value); });
+  document.getElementById("opt-vol").addEventListener("input", e => {
+    state.settings.vol = Number(e.target.value);
+    if (musicGain && audioCtx) musicGain.gain.setTargetAtTime(state.settings.vol * 0.12, audioCtx.currentTime, 0.05);
+  });
+
+  window.addEventListener("keydown", e => {
+    if (["ArrowLeft", "KeyA"].includes(e.code)) keys.left = true;
+    if (["ArrowRight", "KeyD"].includes(e.code)) keys.right = true;
+    if (["ArrowUp", "KeyW"].includes(e.code)) keys.gas = true;
+    if (["ArrowDown", "KeyS"].includes(e.code)) keys.brake = true;
+    if (["ShiftLeft", "ShiftRight", "Space"].includes(e.code)) keys.nitro = true;
+  });
+  window.addEventListener("keyup", e => {
+    if (["ArrowLeft", "KeyA"].includes(e.code)) keys.left = false;
+    if (["ArrowRight", "KeyD"].includes(e.code)) keys.right = false;
+    if (["ArrowUp", "KeyW"].includes(e.code)) keys.gas = false;
+    if (["ArrowDown", "KeyS"].includes(e.code)) keys.brake = false;
+    if (["ShiftLeft", "ShiftRight", "Space"].includes(e.code)) keys.nitro = false;
+  });
+
+  function bindTouch(id, k) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener("touchstart", e => { e.preventDefault(); initAudio(); if (audioCtx && audioCtx.state === "suspended") audioCtx.resume(); keys[k] = true; }, { passive: false });
+    el.addEventListener("touchend", e => { e.preventDefault(); keys[k] = false; }, { passive: false });
+  }
+  bindTouch("t-left", "left"); bindTouch("t-right", "right"); bindTouch("t-gas", "gas"); bindTouch("t-brake", "brake"); bindTouch("t-nitro", "nitro");
+
+  function spawnTraffic() {
+    const lanes = [0.16, 0.38, 0.62, 0.84];
+    const lane = lanes[Math.floor(Math.random() * lanes.length)];
+    for (const c of state.traffic) { if (Math.abs(c.laneX - lane) < 0.12 && c.y < 150) return; }
+    const mult = state.settings.diff === "chill" ? 0.78 : state.settings.diff === "pro" ? 1.25 : 1.0;
+    state.traffic.push({
+      laneX: lane, y: -140, speed: (82 + Math.random() * 52) * mult,
+      w: 56, h: 104, img: trafficImgs[Math.floor(Math.random() * trafficImgs.length)], passed: false
+    });
+  }
+
+  function step(dt) {
+    if (state.mode !== "playing") { updateAudio(); return; }
+    const bonuses = {
+      omar: { steer: 1.12, nitro: 11, score: 1.08, top: 1.0 },
+      noam: { steer: 1.02, nitro: 18, score: 1.0, top: 1.02 },
+      eyal: { steer: 1.05, nitro: 12, score: 1.03, top: 1.06 }
+    };
+    const db = bonuses[state.driver.id] || bonuses.omar;
+    const usingNitro = keys.nitro && state.nitro > 2 && state.speedKmh > 35;
+    state.nitro = usingNitro ? Math.max(0, state.nitro - 28 * dt) : Math.min(100, state.nitro + db.nitro * dt);
+
+    const maxSpd = state.car.topSpeed * db.top * (usingNitro ? 1.22 : 1.0);
+    if (keys.gas || usingNitro) state.speedKmh += (usingNitro ? state.car.accel * 1.75 : state.car.accel) * dt;
+    else if (keys.brake) state.speedKmh -= 195 * dt;
+    else state.speedKmh -= 42 * dt;
+    state.speedKmh = Math.max(0, Math.min(maxSpd, state.speedKmh));
+
+    const gears = [0, 55, 95, 140, 185, 225, 320];
+    let gIdx = 1;
+    while (gIdx < gears.length - 1 && state.speedKmh > gears[gIdx]) gIdx++;
+    state.gear = state.speedKmh < 2 ? "N" : String(gIdx);
+    const prevT = gears[gIdx - 1] || 0;
+    const nextT = gears[gIdx] || 260;
+    state.rpm = state.speedKmh < 2 ? 0.16 : Math.min(1, Math.max(0.22, (state.speedKmh - prevT) / Math.max(25, nextT - prevT)));
+
+    const dir = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+    const targetVx = dir * 0.8 * state.settings.steer * db.steer * Math.min(1, state.speedKmh / 65);
+    state.playerVx += (targetVx - state.playerVx) * Math.min(1, dt * 13);
+    state.playerX = Math.max(0.06, Math.min(0.94, state.playerX + state.playerVx * dt));
+
+    const mps = state.speedKmh / 3.6;
+    state.distanceMeters += mps * dt;
+    state.roadScroll += mps * 14 * dt;
+    state.score += (mps * 2.2 + (usingNitro ? 28 : 0)) * db.score * dt;
+
+    const diffSpawn = state.settings.diff === "chill" ? 1.35 : state.settings.diff === "pro" ? 0.68 : 0.98;
+    state.spawnTimer -= dt;
+    if (state.spawnTimer <= 0) {
+      spawnTraffic();
+      state.spawnTimer = Math.max(0.38, (diffSpawn + Math.random() * 0.5) * (120 / Math.max(70, state.speedKmh)));
+    }
+
+    const roadW = Math.min(canvas.width * 0.84, 540);
+    const roadLeft = (canvas.width - roadW) / 2;
+    const px = roadLeft + state.playerX * roadW;
+    const py = canvas.height - 155;
+
+    for (let i = state.traffic.length - 1; i >= 0; i--) {
+      const c = state.traffic[i];
+      c.y += ((state.speedKmh - c.speed) / 3.6) * 14 * dt + 35 * dt;
+      const cx = roadLeft + c.laneX * roadW;
+      if (!c.passed && c.y > py + 52) {
+        c.passed = true;
+        state.score += (Math.abs(px - cx) < 88 ? 120 : 45) * db.score;
+      }
+      if (Math.abs(px - cx) < 46 && Math.abs(py - c.y) < 86) { triggerGameOver(); return; }
+      if (c.y > canvas.height + 200) state.traffic.splice(i, 1);
+    }
+
+    if (state.shake > 0) state.shake = Math.max(0, state.shake - 35 * dt);
+    updateAudio();
+    syncHUD();
+  }
+
+  function render() {
+    ctx.save();
+    if (state.shake > 0) ctx.translate((Math.random() - 0.5) * state.shake, (Math.random() - 0.5) * state.shake);
+    const pal = {
+      day: { shoulder: "#163024", asphalt: "#1e2430", dash: "rgba(255,255,255,0.45)", tint: "rgba(255,250,235,0.02)" },
+      sunset: { shoulder: "#361d24", asphalt: "#211d2b", dash: "rgba(253,186,116,0.5)", tint: "rgba(245,124,56,0.11)" },
+      night: { shoulder: "#0a111a", asphalt: "#111622", dash: "rgba(148,163,184,0.35)", tint: "rgba(4,9,22,0.42)" }
+    }[state.settings.env];
+
+    ctx.fillStyle = pal.shoulder;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const roadW = Math.min(canvas.width * 0.84, 540);
+    const roadLeft = (canvas.width - roadW) / 2;
+    ctx.fillStyle = pal.asphalt;
+    ctx.fillRect(roadLeft, 0, roadW, canvas.height);
+
+    const stripH = 44;
+    const offset = state.roadScroll % (stripH * 2);
+    for (let y = -stripH * 2 + offset; y < canvas.height + stripH; y += stripH * 2) {
+      ctx.fillStyle = "#dc2626";
+      ctx.fillRect(roadLeft - 9, y, 9, stripH); ctx.fillRect(roadLeft + roadW, y, 9, stripH);
+      ctx.fillStyle = "#f8fafc";
+      ctx.fillRect(roadLeft - 9, y + stripH, 9, stripH); ctx.fillRect(roadLeft + roadW, y + stripH, 9, stripH);
+    }
+
+    ctx.strokeStyle = pal.dash; ctx.lineWidth = 3; ctx.setLineDash([28, 32]); ctx.lineDashOffset = -state.roadScroll;
+    for (let l = 1; l <= 3; l++) {
+      const lx = roadLeft + (roadW / 4) * l;
+      ctx.beginPath(); ctx.moveTo(lx, 0); ctx.lineTo(lx, canvas.height); ctx.stroke();
+    }
+    ctx.setLineDash([]);
+
+    for (const c of state.traffic) {
+      const cx = roadLeft + c.laneX * roadW;
+      ctx.drawImage(c.img, cx - c.w / 2, c.y - c.h / 2, c.w, c.h);
+    }
+
+    const px = roadLeft + state.playerX * roadW;
+    const py = canvas.height - 155;
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.rotate(state.playerVx * 0.14);
+    ctx.drawImage(playerCarImg, -30, -54, 60, 108);
+    ctx.restore();
+
+    ctx.fillStyle = pal.tint;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+  }
+
+  let last = performance.now();
+  function loop(now) {
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    step(dt); render();
+    requestAnimationFrame(loop);
+  }
+  syncHUD();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

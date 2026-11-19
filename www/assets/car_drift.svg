@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 220" width="120" height="220">
+  <defs>
+    <linearGradient id="bodyGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#064e3b"/>
+      <stop offset="50%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#064e3b"/>
+    </linearGradient>
+    <linearGradient id="glassGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="50%" stop-color="#334155"/>
+      <stop offset="100%" stop-color="#090d16"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="60" cy="115" rx="44" ry="96" fill="rgba(0,0,0,0.55)"/>
+  <rect x="8" y="34" width="14" height="36" rx="5" fill="#111318" stroke="#272c38" stroke-width="2"/>
+  <rect x="98" y="34" width="14" height="36" rx="5" fill="#111318" stroke="#272c38" stroke-width="2"/>
+  <rect x="6" y="146" width="16" height="40" rx="5" fill="#111318" stroke="#272c38" stroke-width="2"/>
+  <rect x="98" y="146" width="16" height="40" rx="5" fill="#111318" stroke="#272c38" stroke-width="2"/>
+  <path d="M26,24 C28,12 42,8 60,8 C78,8 92,12 94,24 L100,66 L102,164 C102,188 86,204 60,204 C34,204 18,188 18,164 L20,66 Z" fill="url(#bodyGrad)" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+  <path d="M36,22 L84,22 L80,68 L40,68 Z" fill="rgba(255,255,255,0.08)"/>
+  <path d="M30,78 C30,70 90,70 90,78 L86,150 C86,158 34,158 34,150 Z" fill="url(#glassGrad)"/>
+  <rect x="38" y="96" width="44" height="44" rx="10" fill="#10b981" opacity="0.9"/>
+  <rect x="55" y="12" width="10" height="186" rx="3" fill="#6ee7b7" opacity="0.9"/>
+  <rect x="16" y="188" width="88" height="14" rx="4" fill="#141820" stroke="#6ee7b7" stroke-width="1.5"/>
+  <path d="M25,24 L42,20 L40,31 L24,34 Z" fill="#fef08a"/>
+  <path d="M95,24 L78,20 L80,31 L96,34 Z" fill="#fef08a"/>
+  <rect x="24" y="180" width="20" height="5" rx="2" fill="#ef4444"/>
+  <rect x="76" y="180" width="20" height="5" rx="2" fill="#ef4444"/>
+</svg>
